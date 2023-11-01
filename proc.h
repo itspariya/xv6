@@ -53,8 +53,9 @@ struct proc {
   int end_time;		             // End time
   int total_time;	             // Total time
   struct  proc *lastwaited;    // Last waited child pointer
-  int priority; 
-  int last_start_time;
+  int priority;                // Process priority
+  int arrival_time;            // Time when the process arrived
+  int scheduling_policy;       // Scheduling policy 
 };
 
 // Process memory is laid out contiguously, low addresses first:

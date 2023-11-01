@@ -107,6 +107,8 @@ extern int sys_uniq(void);
 extern int sys_head(void);
 extern int sys_gettime(void);
 extern int sys_ps(void);
+extern int sys_setscheduler(void);
+extern int sys_getscheduler(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -133,6 +135,9 @@ static int (*syscalls[])(void) = {
 [SYS_uniq]    sys_uniq,
 [SYS_head]    sys_head,
 [SYS_ps]      sys_ps,
+[SYS_gettime]      sys_gettime,
+[SYS_setscheduler]      sys_setscheduler,
+[SYS_getscheduler]      sys_getscheduler,
 };
 
 void

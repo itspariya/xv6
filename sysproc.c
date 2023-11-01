@@ -9,6 +9,22 @@
 #include "syscall.h"
 
 int getprocinfo(int pid, struct proc_stat *p);
+
+int
+setscheduler(int policy)
+{
+    if(policy != SCHEDULING_POLICY_FCFS && policy != SCHEDULING_POLICY_PRIORITY)
+        return -1;
+    myproc()->scheduling_policy = policy;
+    return 0;
+}
+
+int
+getscheduler(void)
+{
+    return myproc()->scheduling_policy;
+}
+
 int sys_ps(void)
 {
     int pid;

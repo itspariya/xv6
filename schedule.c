@@ -1,56 +1,51 @@
 #include "types.h"
+#include "stat.h"
 #include "user.h"
 #include "fcntl.h"
 
+int main(int argc, char *argv[]) {
+    int n = 5; // Number of child processes
+    int i;
+    struct proc_stat stats[n];
 
-// Function to execute a CPU-bound process
-void cpu_bound_process() {
-  int i, j;
-  for (i = 0; i < 100; i++) {
-    for (j = 0; j < 1000000; j++) {
-      // busy-wait to consume CPU time
-    }
-  }
-  exit(); // terminate current process
-}
-
-// Function to execute an I/O-bound process
-void io_bound_process() {
-  char *argv[] = { "head", "somefile", 0 };
-  exec("head", argv);
-  exit(); // if exec fails
-}
-
-// Main function where the test scenario begins
-int main(void) {
-  int pid;
-  int start_time, end_time, total_time; // variables for statistics
-
-  // Start a CPU-bound process
-  pid = fork();
-  if (pid == 0) {
-    cpu_bound_process();
-  }
-
-  // Start an I/O-bound process
-  pid = fork();
-  if (pid == 0) {
-    io_bound_process();
-  }
-
-  // Wait for the processes to complete and collect statistics
-  for (int i = 0; i < 2; i++) { // waiting for 2 child processes
-    wait();
-
-    // Call the sys_time system call to get the timing details of the completed process
-    if (sys_gettime(&start_time, &end_time, &total_time) < 0) {
-      // Successfully retrieved the timing information
-      printf(1, "Process %d -> Start: %d, End: %d, Total: %d\n", 
-             pid, start_time, end_time, total_time);
+    for (i = 0; i < n; i++) {
+    int pid = fork();
+    if (pid == 0) {
+        // Child process
+        char *args[3];
+        if (i % 2 == 0) {
+            // Call uniq uniqexample.txt
+            args[0] = "uniq";
+            args[1] = "uniqexample.txt";
+            args[2] = 0;
+            exec(args[0], args);
+        } else {
+            // Call kuniq uniqexample.txt
+            args[0] = "kuniq";
+            args[1] = "uniqexample.txt";
+            args[2] = 0;
+            exec(args[0], args);
+        }
+        exit();
     } else {
-      printf(2, "Error retrieving timing information for process %d\n", pid);
+        // Parent process
+        wait();
+        getprocinfo(pid, &stats[i]);
     }
-  }
+}
 
-  exit(); // end of the main process
+
+    // Calculate and report average wait and turnaround times
+    int total_wait_time = 0;
+    int total_turnaround_time = 0;
+
+    for (i = 0; i < n; i++) {
+        total_wait_time += (stats[i].start_time - stats[i].total_time);
+        total_turnaround_time += (stats[i].start_time);
+    }
+
+    printf(1, "Average Wait Time: %d\n", total_wait_time / n);
+    printf(1, "Average Turnaround Time: %d\n", total_turnaround_time / n);
+
+    exit();
 }

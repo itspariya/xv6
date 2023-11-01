@@ -4,6 +4,8 @@ typedef unsigned char  uchar;
 typedef uint pde_t;
 
 #define STRSIZE 16 // maximum size for the string state
+#define SCHEDULING_POLICY_FCFS 0
+#define SCHEDULING_POLICY_PRIORITY 1
 
 // STRUCTURE FOR proc_stat
 struct proc_stat {
