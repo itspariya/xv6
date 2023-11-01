@@ -11,19 +11,20 @@
 int getprocinfo(int pid, struct proc_stat *p);
 
 int
-setscheduler(int policy)
+sys_getprocinfo(void)
 {
-    if(policy != SCHEDULING_POLICY_FCFS && policy != SCHEDULING_POLICY_PRIORITY)
+    int pid;
+    struct proc_stat *p;
+
+    if(argint(0, &pid) < 0)
         return -1;
-    myproc()->scheduling_policy = policy;
-    return 0;
+    if(argptr(1, (void*)&p, sizeof(*p)) < 0)
+        return -1;
+
+    return getprocinfo(pid, p);
 }
 
-int
-getscheduler(void)
-{
-    return myproc()->scheduling_policy;
-}
+
 
 int sys_ps(void)
 {
@@ -54,6 +55,18 @@ int sys_ps(void)
     return 0;
 }
 
+int sys_setscheduler(int policy)
+{
+    if(policy != SCHEDULING_POLICY_FCFS && policy != SCHEDULING_POLICY_PRIORITY)
+        return -1;
+    myproc()->scheduling_policy = policy;
+    return 0;
+}
+
+int sys_getscheduler(void)
+{
+    return myproc()->scheduling_policy;
+}
 
 int sys_gettime(int *start_time, int *end_time, int *total_time) {
     struct proc *curproc = myproc();

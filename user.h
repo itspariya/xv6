@@ -29,6 +29,10 @@ int uniq(char *string);
 int head(char*, int);
 int gettime(int *start_time, int *end_time, int *total_time);
 int ps(int, struct proc_stat*);
+int setscheduler(int policy);
+int getscheduler(void);
+int getprocinfo(int, struct proc_stat*);
+
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -146,7 +146,9 @@ found:
   // Initialize the lastwaited pointer
   p->lastwaited = 0;
   p->total_time = 0;
-  p->last_start_time = ticks;
+  p->arrival_time = ticks;
+
+
 
   release(&ptable.lock);
 
@@ -408,9 +410,8 @@ void
 scheduler(void)
 {
   struct proc *p;
-  struct proc *selected_p; // the process to run
-  int lowest_start_tick = 2172895;  // for FCFS
-  int highest_priority = 2172895;    // for priority scheduling
+  struct proc *selected_p = NULL;
+
     
   
   struct cpu *c = mycpu();
@@ -424,45 +425,36 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    selected_p = 0; // Reset selected process before searching
-    if (current_scheduling_policy == SCHEDULING_POLICY_FCFS)
-    {
-      lowest_start_tick = ~0;
-    }
-    else
-    {
-        highest_priority = 2147483647; // max value reprosenting lowest priority
-    }
-      
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-      
-      if (current_scheduling_policy == SCHEDULING_POLICY_FCFS)
-      {
-        // FCFS policy: choose the process with the oldest start_tick.
-        if (p->creation_time < lowest_start_tick)
-        {
-            selected_p = p;
-            lowest_start_tick = p->creation_time;
-        }
+    if (myproc()->scheduling_policy == SCHEDULING_POLICY_FCFS) {
+            int earliest_time = 2172898;
+            for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+                if(p->state != RUNNABLE)
+                    continue;
+                if(p->arrival_time < earliest_time) {
+                    earliest_time = p->arrival_time;
+                    selected_p = p;
+                }
+            }
       }
-      else
-      {
-        // Priority scheduling policy: choose the process with the highest priority.
-        if (p->priority < highest_priority)
-        {
-          selected_p = p;
-          highest_priority = p->priority;
+    else if (myproc()->scheduling_policy == SCHEDULING_POLICY_PRIORITY) {
+            int highest_priority = 0;
+            for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+                if(p->state != RUNNABLE)
+                    continue;
+                if(p->priority > highest_priority) {
+                    highest_priority = p->priority;
+                    selected_p = p;
+                }
+            }
         }
-      }
-    }
     // If we found a process to run, execute it
     if (selected_p)
     {
+      struct proc *selected_p = NULL;
+
       // Calculate execution time for the currently running process
       if(c->proc && c->proc->state == RUNNING) {
-        c->proc->total_time += ticks - c->proc->last_start_time;  // Update the execution time
+        c->proc->total_time += ticks - c->proc->arrival_time;  // Update the execution time
       }
       
       // Switch to chosen process. It is the process's job
@@ -471,7 +463,7 @@ scheduler(void)
       c->proc = selected_p;
       switchuvm(selected_p);
       selected_p->state = RUNNING;
-      selected_p->last_start_time = ticks;  // Record the current time.
+      selected_p->arrival_time = ticks;  // Record the current time.
 
       swtch(&(c->scheduler), selected_p->context);
       switchkvm();

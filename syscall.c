@@ -109,6 +109,8 @@ extern int sys_gettime(void);
 extern int sys_ps(void);
 extern int sys_setscheduler(void);
 extern int sys_getscheduler(void);
+extern int sys_getprocinfo(void);
+
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -136,8 +138,10 @@ static int (*syscalls[])(void) = {
 [SYS_head]    sys_head,
 [SYS_ps]      sys_ps,
 [SYS_gettime]      sys_gettime,
-[SYS_setscheduler]      sys_setscheduler,
-[SYS_getscheduler]      sys_getscheduler,
+[SYS_setscheduler] = sys_setscheduler,
+[SYS_getscheduler] = sys_getscheduler,
+[SYS_getprocinfo]    sys_getprocinfo,
+
 };
 
 void

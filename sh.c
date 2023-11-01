@@ -3,6 +3,9 @@
 #include "types.h"
 #include "user.h"
 #include "fcntl.h"
+#include "syscall.h"
+#include "stat.h"
+
 
 
 // Parsed command representation
@@ -13,6 +16,8 @@
 #define BACK  5
 
 #define MAXARGS 10
+
+char cmd[100];  // Store the command entered by the user
 
 struct cmd {
   int type;
@@ -143,60 +148,60 @@ getcmd(char *buf, int nbuf)
 }
 
 int
-main(void)
+main(int argc, char *argv[])
 {
-  static char buf[100];
-  int fd;
+    static char buf[100];
+    int fd;
 
-  // Ensure that three file descriptors are open.
-  while((fd = open("console", O_RDWR)) >= 0){
-    if(fd >= 3){
-      close(fd);
-      break;
+    // Ensure that three file descriptors are open.
+    while((fd = open("console", O_RDWR)) >= 0){
+        if(fd >= 3){
+            close(fd);
+            break;
+        }
     }
-  }
 
-  // Read and run input commands.
-while(getcmd(buf, sizeof(buf)) >= 0){
-    if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
-        // Chdir must be called by the parent, not the child.
-        buf[strlen(buf)-1] = 0;  // chop \n
-        if(chdir(buf+3) < 0)
-            printf(2, "cannot cd %s\n", buf+3);
-        continue;
+    // Read and run input commands.
+    while(getcmd(buf, sizeof(buf)) >= 0){
+        if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
+            // Chdir must be called by the parent, not the child.
+            buf[strlen(buf)-1] = 0;  // chop \n
+            if(chdir(buf+3) < 0)
+                printf(2, "cannot cd %s\n", buf+3);
+            continue;
+        }
+
+        if(strcmp(buf, "setscheduler") == 0){
+            if(argc < 2){
+                printf(2, "Usage: setscheduler [policy]\n");
+                printf(2, "0: FCFS\n");
+                printf(2, "1: Priority\n");
+                continue;
+            }
+            int policy = atoi(argv[1]);
+            if(policy != SCHEDULING_POLICY_FCFS && policy != SCHEDULING_POLICY_PRIORITY){
+                printf(2, "Invalid scheduling policy\n");
+                continue;
+            }
+            setscheduler(policy);  // Use syscall to invoke setscheduler
+        } else if(strcmp(buf, "getscheduler") == 0){
+            int policy = getscheduler();  // Use syscall to invoke getscheduler
+            if(policy == SCHEDULING_POLICY_FCFS){
+                printf(1, "Current Scheduling Policy: FCFS\n");
+            } else if(policy == SCHEDULING_POLICY_PRIORITY){
+                printf(1, "Current Scheduling Policy: Priority\n");
+            } else {
+                printf(2, "Error fetching scheduling policy\n");
+            }
+        } else {
+            if(fork1() == 0)
+                runcmd(parsecmd(buf));
+            wait();
+        }
     }
-    
-    if(strcmp(cmd, "setscheduler") == 0){
-    if(argc < 2){
-        printf(2, "Usage: setscheduler [policy]\n");
-        printf(2, "0: FCFS\n");
-        printf(2, "1: Priority\n");
-        continue;
-    }
-    int policy = atoi(argv[1]);
-    if(policy != SCHEDULING_POLICY_FCFS && policy != SCHEDULING_POLICY_PRIORITY){
-        printf(2, "Invalid scheduling policy\n");
-        continue;
-    }
-    setscheduler(policy);
-} else if(strcmp(cmd, "getscheduler") == 0){
-    int policy = getscheduler();
-    if(policy == SCHEDULING_POLICY_FCFS){
-        printf(1, "Current Scheduling Policy: FCFS\n");
-    } else if(policy == SCHEDULING_POLICY_PRIORITY){
-        printf(1, "Current Scheduling Policy: Priority\n");
-    } else {
-        printf(2, "Error fetching scheduling policy\n");
-    }
+    exit();
 }
 
-    
-    if(fork1() == 0)
-        runcmd(parsecmd(buf));
-    wait();
-}
-  exit();
-}
 
 void
 panic(char *s)

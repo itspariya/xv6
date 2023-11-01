@@ -9,31 +9,32 @@ int main(int argc, char *argv[]) {
     struct proc_stat stats[n];
 
     for (i = 0; i < n; i++) {
-    int pid = fork();
-    if (pid == 0) {
-        // Child process
-        char *args[3];
-        if (i % 2 == 0) {
-            // Call uniq uniqexample.txt
-            args[0] = "uniq";
-            args[1] = "uniqexample.txt";
-            args[2] = 0;
-            exec(args[0], args);
+        int pid = fork();
+        if (pid == 0) {
+            // Child process
+            char *args[3];
+            if (i % 2 == 0) {
+                // Call uniq uniqexample.txt
+                args[0] = "uniq";
+                args[1] = "uniqexample.txt";
+                args[2] = 0;
+                exec(args[0], args);
+            } else {
+                // Call kuniq uniqexample.txt
+                args[0] = "kuniq";
+                args[1] = "uniqexample.txt";
+                args[2] = 0;
+                exec(args[0], args);
+            }
+            exit();
         } else {
-            // Call kuniq uniqexample.txt
-            args[0] = "kuniq";
-            args[1] = "uniqexample.txt";
-            args[2] = 0;
-            exec(args[0], args);
+            // Parent process
+            wait();
+            if(getprocinfo(pid, &stats[i]) < 0) {
+                printf(2, "Error retrieving process info for PID %d\n", pid);
+            }
         }
-        exit();
-    } else {
-        // Parent process
-        wait();
-        getprocinfo(pid, &stats[i]);
     }
-}
-
 
     // Calculate and report average wait and turnaround times
     int total_wait_time = 0;

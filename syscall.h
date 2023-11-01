@@ -24,3 +24,6 @@
 #define SYS_head   23
 #define SYS_gettime   24
 #define SYS_ps	   25
+#define SYS_setscheduler   26
+#define SYS_getscheduler   27
+#define SYS_getprocinfo  28
