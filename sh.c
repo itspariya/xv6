@@ -4,6 +4,7 @@
 #include "user.h"
 #include "fcntl.h"
 
+
 // Parsed command representation
 #define EXEC  1
 #define REDIR 2
@@ -156,18 +157,44 @@ main(void)
   }
 
   // Read and run input commands.
-  while(getcmd(buf, sizeof(buf)) >= 0){
+while(getcmd(buf, sizeof(buf)) >= 0){
     if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
-      // Chdir must be called by the parent, not the child.
-      buf[strlen(buf)-1] = 0;  // chop \n
-      if(chdir(buf+3) < 0)
-        printf(2, "cannot cd %s\n", buf+3);
-      continue;
+        // Chdir must be called by the parent, not the child.
+        buf[strlen(buf)-1] = 0;  // chop \n
+        if(chdir(buf+3) < 0)
+            printf(2, "cannot cd %s\n", buf+3);
+        continue;
     }
+    
+    if(strcmp(cmd, "setscheduler") == 0){
+    if(argc < 2){
+        printf(2, "Usage: setscheduler [policy]\n");
+        printf(2, "0: FCFS\n");
+        printf(2, "1: Priority\n");
+        continue;
+    }
+    int policy = atoi(argv[1]);
+    if(policy != SCHEDULING_POLICY_FCFS && policy != SCHEDULING_POLICY_PRIORITY){
+        printf(2, "Invalid scheduling policy\n");
+        continue;
+    }
+    setscheduler(policy);
+} else if(strcmp(cmd, "getscheduler") == 0){
+    int policy = getscheduler();
+    if(policy == SCHEDULING_POLICY_FCFS){
+        printf(1, "Current Scheduling Policy: FCFS\n");
+    } else if(policy == SCHEDULING_POLICY_PRIORITY){
+        printf(1, "Current Scheduling Policy: Priority\n");
+    } else {
+        printf(2, "Error fetching scheduling policy\n");
+    }
+}
+
+    
     if(fork1() == 0)
-      runcmd(parsecmd(buf));
+        runcmd(parsecmd(buf));
     wait();
-  }
+}
   exit();
 }
 
