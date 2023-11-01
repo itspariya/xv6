@@ -8,7 +8,7 @@
 #include "spinlock.h"
 #include "syscall.h"
 
-int current_scheduling_policy;
+int current_scheduling_policy = SCHEDULING_POLICY_RR;
 
 struct {
   struct spinlock lock;
@@ -406,27 +406,22 @@ wait(int *wtime, int *rtime)
 //  - eventually that proc
 // ess transfers control
 //      via swtch back to the scheduler.
-void
-scheduler(void)
+void scheduler(void)
 {
-  struct proc *p;
-  struct proc *selected_p = NULL;
+    struct proc *p;
+    struct cpu *c = mycpu();
+    c->proc = 0;
 
-    
-  
-  struct cpu *c = mycpu();
-  c->proc = 0;
+    for(;;){
+        // Enable interrupts on this processor.
+        sti();
 
-  for(;;){
-    // Enable interrupts on this processor.
-    sti();
+        // Loop over process table looking for process to run.
+        acquire(&ptable.lock);
 
-
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-
-    if (myproc()->scheduling_policy == SCHEDULING_POLICY_FCFS) {
+        if (current_scheduling_policy == SCHEDULING_POLICY_FCFS) {
             int earliest_time = 2172898;
+            struct proc *selected_p = NULL;
             for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
                 if(p->state != RUNNABLE)
                     continue;
@@ -435,9 +430,19 @@ scheduler(void)
                     selected_p = p;
                 }
             }
-      }
-    else if (myproc()->scheduling_policy == SCHEDULING_POLICY_PRIORITY) {
+            if (selected_p) {
+                c->proc = selected_p;
+                switchuvm(selected_p);
+                selected_p->state = RUNNING;
+                selected_p->arrival_time = ticks;  // Record the current time.
+                swtch(&(c->scheduler), selected_p->context);
+                switchkvm();
+                c->proc = 0;
+            }
+        }
+        else if (current_scheduling_policy == SCHEDULING_POLICY_PRIORITY) {
             int highest_priority = 0;
+            struct proc *selected_p = NULL;
             for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
                 if(p->state != RUNNABLE)
                     continue;
@@ -446,36 +451,32 @@ scheduler(void)
                     selected_p = p;
                 }
             }
+            if (selected_p) {
+                c->proc = selected_p;
+                switchuvm(selected_p);
+                selected_p->state = RUNNING;
+                selected_p->arrival_time = ticks;  // Record the current time.
+                swtch(&(c->scheduler), selected_p->context);
+                switchkvm();
+                c->proc = 0;
+            }
         }
-    // If we found a process to run, execute it
-    if (selected_p)
-    {
-      struct proc *selected_p = NULL;
-
-      // Calculate execution time for the currently running process
-      if(c->proc && c->proc->state == RUNNING) {
-        c->proc->total_time += ticks - c->proc->arrival_time;  // Update the execution time
-      }
-      
-      // Switch to chosen process. It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = selected_p;
-      switchuvm(selected_p);
-      selected_p->state = RUNNING;
-      selected_p->arrival_time = ticks;  // Record the current time.
-
-      swtch(&(c->scheduler), selected_p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+        else {  // Default to Round Robin scheduling
+            for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+                if(p->state != RUNNABLE)
+                    continue;
+                c->proc = p;
+                switchuvm(p);
+                p->state = RUNNING;
+                swtch(&(c->scheduler), p->context);
+                switchkvm();
+                c->proc = 0;
+            }
+        }
+        release(&ptable.lock);
     }
-
-    release(&ptable.lock);
-  }
 }
+
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
